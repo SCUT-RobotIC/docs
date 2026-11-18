@@ -1,4 +1,8 @@
 import {themes as prismThemes} from 'prism-react-renderer';
+import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
+import parseHierarchicalNumberPrefix from './src/numberPrefix';
+import obsidianCallouts from './src/remark/obsidianCallouts';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
@@ -7,10 +11,6 @@ const config: Config = {
   tagline: '华南理工大学 RobotIC 机器人实验室知识库',
   favicon: 'img/favicon.png',
 
-  future: {
-    v4: true,
-  },
-
   url: 'https://scut-robotic.github.io',
   baseUrl: '/docs/',
 
@@ -18,6 +18,10 @@ const config: Config = {
   projectName: 'docs',
 
   onBrokenLinks: 'throw',
+
+  markdown: {
+    format: 'detect',
+  },
 
   i18n: {
     defaultLocale: 'zh-Hans',
@@ -32,6 +36,9 @@ const config: Config = {
           path: 'content',
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
+          numberPrefixParser: parseHierarchicalNumberPrefix,
+          beforeDefaultRemarkPlugins: [remarkMath, obsidianCallouts],
+          rehypePlugins: [rehypeKatex],
         },
         blog: false,
         theme: {
@@ -57,9 +64,9 @@ const config: Config = {
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'knowledgeSidebar',
+          sidebarId: 'electricControlSidebar',
           position: 'left',
-          label: '文档',
+          label: '电控组资料',
         },
         {
           href: 'https://robot-ic.com/',
