@@ -262,6 +262,13 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   );
   assert.match(designThinkingHtml, /<title[^>]*>程序设计的思维/);
   assert.match(designThinkingHtml, /<h1>程序设计的思维<\/h1>/);
+  assert.match(designThinkingHtml, /Ver1\.0<br\s*\/?>/);
+
+  assert.match(coreHtml, /更多参考：<br\s*\/?>/);
+  assert.match(
+    coreHtml,
+    /Cortex-M3 Devices Generic User Guide<\/a><br\s*\/?>/,
+  );
 
   const documentTitles = [
     ["RTOS/RTOS", "RTOS"],
