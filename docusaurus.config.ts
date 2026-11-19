@@ -1,10 +1,14 @@
 import {themes as prismThemes} from 'prism-react-renderer';
+import path from 'node:path';
 import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
+import {discoverKnowledgeBases} from './src/knowledgeSidebars.mjs';
 import parseHierarchicalNumberPrefix from './src/numberPrefix';
 import obsidianCallouts from './src/remark/obsidianCallouts';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+
+const knowledgeBases = discoverKnowledgeBases(path.resolve(process.cwd(), 'content'));
 
 const config: Config = {
   title: 'RobotIC 知识库',
@@ -62,12 +66,12 @@ const config: Config = {
         srcDark: 'img/robot-logo-light.png',
       },
       items: [
-        {
+        ...knowledgeBases.map((knowledgeBase) => ({
           type: 'docSidebar',
-          sidebarId: 'electricControlSidebar',
-          position: 'left',
-          label: '电控组资料',
-        },
+          sidebarId: knowledgeBase.sidebarId,
+          position: 'left' as const,
+          label: knowledgeBase.name,
+        })),
         {
           href: 'https://robot-ic.com/',
           label: '返回官网',

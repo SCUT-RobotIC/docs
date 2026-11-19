@@ -1,153 +1,193 @@
-# RobotIC Docusaurus 知识库
+# RobotIC 知识库开发与内容维护指南
 
-这是华南理工大学 RobotIC 机器人实验室的知识库工程，使用 Docusaurus 3 构建。内容发布到 GitHub Pages：
+这是华南理工大学 RobotIC 机器人实验室的知识库工程，使用 Docusaurus 3 构建。
 
-```text
-https://scut-robotic.github.io/docs/
-```
+线上地址：[RobotIC 知识库](https://scut-robotic.github.io/docs/)
+
+仓库内容分为两类使用者：
+
+- **内容编辑者**：只编写和维护 Markdown 文档，通常不需要修改 TypeScript 或 React 代码。
+- **站点开发者**：维护主题、配置、Markdown 插件、自动化测试和 GitHub Pages 部署。
+
+两种工作可以共用同一份 `content/` 内容，但操作步骤不同。
 
 ## 工程结构
 
-- 正文：`content/`
-- 侧边栏：`sidebars.ts`
-- 图像等静态资源：`static/`
-- Markdown 转换插件：`src/remark/`
-- 站点配置：`docusaurus.config.ts`
-- 构建测试：`tests/`
-- 构建产物：`docs/`，不提交到源码分支
+```text
+content/                 知识库正文
+sidebars.ts              自动侧边栏入口
+src/knowledgeSidebars.mjs 目录扫描、排序和侧边栏生成
+static/                  全站静态资源
+src/css/                 全站样式
+src/remark/              Obsidian 语法转换插件
+docusaurus.config.ts     站点配置
+.github/workflows/       GitHub Pages 自动部署
+tests/                   构建与内容检查
+docs/                    本地构建产物，不提交
+```
 
-## 本地开发
+发布内容以 `content/` 为唯一来源。不要维护另一份 Markdown 副本。
 
-在工程根目录运行：
+## 方式一：只写内容
+
+不需要安装 Node.js，也不需要理解 Docusaurus 代码。推荐使用 Obsidian 或任意 Markdown 编辑器。
+
+1. 获取仓库并拉取最新 `main` 分支。
+2. 在 Obsidian 中把仓库的 `content/` 目录添加为 Vault，或者直接使用文本编辑器打开该目录。
+3. 在任一知识库下修改现有文档，或按目录结构新增主题和 Markdown 文件。
+4. 确认目录名和文件名符合排序约定，网站会自动生成顶栏入口和侧边栏。
+5. 提交并推送内容；如需本地预览，再按下文的开发流程启动站点。
+
+内容编辑应保持以下约定：
+
+- 每篇文档只有一个一级标题 `#`。
+- 知识库、主题和文档的层级直接由目录层级表达。
+- 文件和目录默认按名称字典序排列。
+- 图片使用相对于当前文档的路径。
+- 不修改 `docs/`，它是构建产物。
+
+## 方式二：开发站点
+
+开发环境需要 Git 和 Node.js 20 或更高版本。在仓库根目录运行：
 
 ```powershell
 npm install
 npm run start
 ```
 
-默认访问：
+本地地址：
 
 ```text
 http://localhost:3000/docs/
 ```
 
-修改普通 Markdown 后页面会自动刷新。修改 Docusaurus 配置、Remark 插件或依赖后，需要重启开发服务器。
+普通 Markdown 修改会自动刷新。修改 `docusaurus.config.ts`、`sidebars.ts`、`src/knowledgeSidebars.mjs`、`src/remark/` 或依赖后，建议重启开发服务器。
 
-## 编写指南
+开发完成后运行：
 
-### 换行
-
-Obsidian 会把普通 Markdown 中的单换行显示为换行，而 Docusaurus 默认把单换行当作空格。需要两边都强制换行时，在前一行末尾保留两个半角空格，再换行：
-
-```markdown
-> Ver1.0··
-> 本章编者：李融
+```powershell
+npm run typecheck
+node --test tests/docs-build.test.mjs
+npm run build
 ```
 
-上面的 `··` 表示两个实际的半角空格，不是中文句号，也不要写在下一行开头。普通长段落不要为了排版手动断行，让网页和 Obsidian 根据各自窗口宽度自动折行。
+其中 `node --test tests/docs-build.test.mjs` 会完整执行一次 Docusaurus 构建，因此通常可以代替单独的本地构建检查。
 
-行尾空格属于 Markdown 语法的一部分，提交前不要运行会删除行尾空格的格式化工具。
+## 自动生成知识库与侧边栏
 
-### 内容源
-
-知识库发布以 Docusaurus 工程中的文件为准：
+`content/` 下的每个顶层目录都会自动成为一个独立知识库、顶栏入口和侧边栏。目录层级直接对应主题层级：
 
 ```text
-D:\dev\Docusaurus\content\
+content/
+└── 视觉组知识库/
+    ├── index.mdx
+    └── 1. 基础/
+        ├── index.mdx
+        └── 1.1 相机/
+            └── 相机模型.md
 ```
 
-当前嵌入式软件资料位于：
+上述结构会自动生成：
 
 ```text
-D:\dev\Docusaurus\content\电控组知识库\嵌入式软件基础\
+视觉组知识库
+└── 1. 基础
+    └── 1.1 相机
+        └── 相机模型
 ```
 
-建议直接编辑这里的内容，并把它作为唯一发布源。不要同时修改 Obsidian 原件和 Docusaurus 副本，否则两边会逐渐产生差异。
+规则如下：
 
-如果需要继续用 Obsidian 编辑，可以把 `D:\dev\Docusaurus\content` 添加为 Obsidian Vault，或只打开 `content` 目录。
+- 带 `index.md` 或 `index.mdx` 的目录会成为可点击的主题入口。
+- 其他 Markdown 自动成为侧边栏文档。
+- 可以使用任意层级目录，不需要填写数字格式。
+- 默认按目录名和文件名的字典序排列。
+- 隐藏目录和文件不会进入侧边栏，例如 `.obsidian`。
 
-## 修改现有文档
+普通编辑者新增内容时，不需要修改 `sidebars.ts`。开发服务器运行时新增或移动顶层知识库、主题目录后，如果侧边栏没有立即刷新，重启 `npm run start` 即可；正式构建不需要额外操作。
 
-1. 打开 `content/电控组知识库/嵌入式软件基础/` 下对应的 Markdown 文件。
-2. 修改正文。
-3. 运行 `npm run start` 预览。
-4. 确认页面、图片、公式和高亮块正常。
-5. 运行测试和正式构建。
+### 特殊排序
 
-## 新增文档
+如果字典序不满足要求，可以在对应目录放置 `_order.json`，只列出需要提前的直属目录或文件：
 
-新文档放入对应分类目录，例如：
-
-```text
-content/电控组知识库/嵌入式软件基础/1. 编程基础/1.5-新文档.md
+```json
+{
+  "order": [
+    "1. 基础",
+    "2. 进阶",
+    "3. 附录"
+  ]
+}
 ```
 
-推荐使用以下头部：
+未出现在列表中的项目排在已列出项目之后，再按字典序排列。知识库顶层的特殊顺序由 `content/_order.json` 控制。
+
+### 文档属性
+
+普通文档可以不写 front matter，页面标题会使用第一个 H1。需要自定义页面标题或侧栏名称时再使用：
 
 ```markdown
 ---
-title: 新文档
-sidebar_label: 1.5 新文档
-sidebar_position: 30
+title: 相机模型
+sidebar_label: 1.1.1 相机模型
 ---
 
-# 新文档
+# 相机模型
 
 正文从这里开始。
 ```
 
-编号采用两层结构：
+`sidebar_position` 不参与当前目录驱动的侧边栏排序。
 
-- 外层分类使用 `1.`、`2.`、`3.`……
-- 分类内正文使用 `1.1-`、`1.2-`、`2.1-`、`2.2-`……
-- 番外、附录放在正文之后，例如 `1.3-番外`、`1.4-附录`
+## Markdown 语法速查
 
-自定义前缀解析器位于 `src/numberPrefix.ts`，会把 `1.2` 转换为可排序的数值，同时从页面路由中移除前缀。
+### 标题层级
 
-编号只用于文件名、分类标签和 `sidebar_label`。每篇具体文档的 `title` 和正文 H1 只写纯文档标题，不再重复编号。
+每篇文档只写一个一级标题，正文内部从二级标题开始，不要跳过层级：
 
-当前使用 `sidebars.ts` 中的显式侧边栏。新增文档后，需要把文档 ID 加到对应分类的 `items` 中。
+```markdown
+# 文档标题
 
-例如：
+## 第一节
 
-```ts
-{
-  type: 'category',
-  label: '1. 编程基础',
-  items: [
-    '电控组知识库/嵌入式软件基础/编程基础/C语言编程',
-    '电控组知识库/嵌入式软件基础/编程基础/程序设计的思维',
-  ],
-}
+### 第一节的小节
 ```
 
-## 新增分类
+### 段落与换行
 
-显式侧边栏模式下，新建目录后还需要在 `sidebars.ts` 中添加一个 `category`：
+段落之间留一个空行。Obsidian 会把单个源码换行显示为换行，Docusaurus 默认把它当作空格；需要两边都强制换行时，在上一行末尾保留两个半角空格：
 
-```ts
-{
-  type: 'category',
-  label: '6. 新分类',
-  collapsed: true,
-  items: [
-    '电控组知识库/嵌入式软件基础/新分类/6.1-新文档',
-  ],
-}
+```markdown
+第一行··
+第二行
 ```
 
-## 新增专业组知识库
+上面的 `··` 表示两个实际的半角空格。行尾空格属于 Markdown 语法，不要启用会删除行尾空格的格式化工具。普通长段落不要手动折行，让页面根据窗口宽度自动换行。
 
-不同组使用独立 sidebar，互不混入：
+### 强调、代码和链接
 
-1. 在 `content/` 下创建新的组目录，例如 `content/视觉组知识库/`。
-2. 在 `sidebars.ts` 中增加独立的 `visionGroupSidebar`。
-3. 只把视觉组的文档 ID 放入该 sidebar。
-4. 在首页 `content/welcome.mdx` 增加进入视觉组知识库的链接。
+```markdown
+**粗体**
+*斜体*
+`行内代码`
+[链接文字](https://example.com)
+```
 
-首页不属于任何专业组 sidebar，只负责选择知识库。进入某个组后，只显示该组自己的目录。
+同目录文档之间的链接使用相对路径，不写本地绝对路径。
 
-## 图片
+### 列表
+
+```markdown
+- 无序列表项
+- 另一个列表项
+
+1. 有序列表项
+2. 另一个有序列表项
+```
+
+嵌套列表使用两个或四个空格缩进，并保持整篇文档一致。
+
+### 图片
 
 图片放在文档附近的 `assets/` 或文档同级目录，并使用相对路径：
 
@@ -155,26 +195,49 @@ sidebar_position: 30
 ![示意图](<assets/示意图.png>)
 ```
 
-文件名含空格时保留尖括号。不要使用本地绝对路径，例如 `D:\...`。
+文件名含空格时保留尖括号。图片路径必须相对于当前 Markdown 文件，不使用本地绝对路径。
 
-## 高亮块
+### 代码块
 
-可以继续使用 Obsidian callout：
+在围栏后标注语言，以获得正确高亮：
+
+````markdown
+```c
+int main(void) {
+    return 0;
+}
+```
+````
+
+### 高亮块
+
+可以继续使用 Obsidian callout。正文中的每一行都要以 `>` 开头：
 
 ```markdown
 > [!Note] 标题
-> 正文
+> 正文第一段
+>
+> 正文第二段
 ```
 
-构建时会自动转换为 Docusaurus admonition。当前映射：
+构建时会自动转换为 Docusaurus admonition。当前颜色和语义映射：
 
-- `Note` → 蓝色“信息”
-- `Info` → 灰色“备注”
-- `Tip` / `Success` → 绿色
-- `Warning` / `Attention` / `Question` → 黄色
-- `Important` / `Danger` → 红色
+| 写法 | 显示效果 |
+| --- | --- |
+| `[!Note]` | 蓝色，信息 |
+| `[!Info]` | 灰色，备注 |
+| `[!Tip]` / `[!Success]` | 绿色，提示 |
+| `[!Warning]` / `[!Attention]` / `[!Question]` | 黄色，警告或问题 |
+| `[!Important]` / `[!Danger]` | 红色，重要或危险 |
 
-## 公式
+推荐给每个高亮块写明确标题，例如：
+
+```markdown
+> [!Question] 需要先完成什么？
+> 阅读本节前应先掌握上一节的内容。
+```
+
+### 公式
 
 支持行内公式和独立公式：
 
@@ -186,11 +249,68 @@ f = \frac{\mathrm{CLK}}{\mathrm{PSC} + 1}
 $$
 ```
 
-含 JSX 冲突的复杂 `.md` 文件可以在 front matter 中声明：
+公式由 KaTeX 渲染。复杂公式应单独成段，避免和中文标点混在同一行造成解析歧义。
+
+### MDX：在 Markdown 中使用 JSX
+
+Docusaurus 本身基于 MDX。普通内容继续使用 `.md`；需要在 Markdown 中插入 JSX、导入组件或使用表达式时，使用 `.mdx`。
+
+MDX 可以理解为“Markdown + JSX”。除了常规 Markdown，它还支持：
+
+- 行内 HTML/JSX：
+
+```mdx
+按 <kbd>Ctrl</kbd> + <kbd>C</kbd> 复制。
+```
+
+- 导入并使用 React 组件：
+
+```mdx
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs>
+  <TabItem value="stm32" label="STM32">
+    STM32 内容
+  </TabItem>
+  <TabItem value="rtos" label="RTOS">
+    RTOS 内容
+  </TabItem>
+</Tabs>
+```
+
+组件导入写在 front matter 之后、正文之前。组件内部可以继续写普通 Markdown。
+
+- 使用 JavaScript 表达式：
+
+```mdx
+当前计算结果：{2 * 4}
+```
+
+- 使用 MDX 注释：
+
+```mdx
+{/* 这段注释不会显示在页面上 */}
+```
+
+编写时注意：
+
+- 不需要组件或表达式时优先使用 `.md`，源码更简单，也更容易被其他 Markdown 工具读取。
+- 在 MDX 中，`{}` 和 `<组件名>` 具有特殊含义；需要展示这些字符时放进行内代码：
+
+```mdx
+使用 `{变量}` 表示表达式，使用 `<Component />` 表示组件。
+```
+
+- 如果文件必须保留 `.md` 后缀但同时包含 MDX，需要在 front matter 中声明：
 
 ```yaml
+---
 format: mdx
+---
 ```
+
+- 组件必须能在构建阶段正常渲染，不要在组件顶层直接访问 `window`、`document` 等只在浏览器中存在的对象。
 
 ## 发布前检查
 
@@ -224,7 +344,7 @@ npm run build
 静态站点输出到：
 
 ```text
-D:\dev\Docusaurus\docs
+docs/
 ```
 
 推送到 `main` 后，GitHub Actions 会执行依赖安装、TypeScript 检查和 Docusaurus 构建，然后发布到 GitHub Pages。

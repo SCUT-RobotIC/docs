@@ -1,8 +1,22 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import {
+  buildKnowledgeSidebars,
+  discoverKnowledgeBases,
+  knowledgeBaseSidebarId,
+} from "../src/knowledgeSidebars.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const siteRoot = repoRoot;
@@ -14,6 +28,7 @@ const importedRoot = path.join(
   "电控组知识库",
   "嵌入式软件基础",
 );
+const contentRoot = path.join(repoRoot, "content");
 
 function collectFiles(directory) {
   const files = [];
@@ -47,18 +62,90 @@ function collectSidebarLabels(items) {
   );
 }
 
+test("generates nested sidebars from content directories", () => {
+  const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), "robotickb-"));
+  try {
+    const knowledgeBaseRoot = path.join(temporaryRoot, "机械组知识库");
+    const firstTopicRoot = path.join(knowledgeBaseRoot, "1. 一级主题");
+    const secondTopicRoot = path.join(firstTopicRoot, "1.1 二级主题");
+    mkdirSync(secondTopicRoot, {recursive: true});
+    writeFileSync(
+      path.join(temporaryRoot, "_order.json"),
+      '{"order":["机械组知识库","电控组知识库","算法组知识库"]}',
+    );
+    for (const name of ["电控组知识库", "算法组知识库"]) {
+      const directory = path.join(temporaryRoot, name);
+      mkdirSync(directory, {recursive: true});
+      writeFileSync(
+        path.join(directory, "index.md"),
+        `# ${name}\n\n知识库首页。\n`,
+      );
+    }
+    writeFileSync(
+      path.join(knowledgeBaseRoot, "index.md"),
+      "# 机械组知识库\n\n知识库首页。\n",
+    );
+    writeFileSync(
+      path.join(firstTopicRoot, "index.md"),
+      "# 一级主题\n\n一级主题首页。\n",
+    );
+    writeFileSync(
+      path.join(secondTopicRoot, "示例文档.md"),
+      "# 示例文档\n\n正文。\n",
+    );
+
+    assert.deepEqual(
+      discoverKnowledgeBases(temporaryRoot).map(({name}) => name),
+      ["机械组知识库", "电控组知识库", "算法组知识库"],
+    );
+
+    const sidebars = buildKnowledgeSidebars(temporaryRoot);
+    const sidebarId = knowledgeBaseSidebarId("机械组知识库");
+    const root = sidebars[sidebarId][0];
+    assert.equal(root.label, "机械组知识库");
+    assert.equal(root.link.id, "机械组知识库/index");
+    assert.equal(root.items[0].label, "1. 一级主题");
+    assert.equal(
+      root.items[0].link.id,
+      "机械组知识库/一级主题/index",
+    );
+    assert.deepEqual(root.items[0].items[0].items, [
+      {
+        type: "doc",
+        id: "机械组知识库/一级主题/二级主题/示例文档",
+      },
+    ]);
+  } finally {
+    rmSync(temporaryRoot, {recursive: true, force: true});
+  }
+});
+
 test("builds the Docusaurus knowledge base under the docs URL", () => {
   const readme = readFileSync(path.join(repoRoot, "README.md"), "utf8");
-  assert.match(readme, /## 编写指南/);
-  assert.match(readme, /## 内容源/);
-  assert.match(readme, /## 新增文档/);
   assert.match(readme, /## 发布前检查/);
+  assert.match(readme, /## 方式一：只写内容/);
+  assert.match(readme, /## 方式二：开发站点/);
+  assert.match(readme, /## 自动生成知识库与侧边栏/);
+  assert.match(readme, /### 特殊排序/);
+  assert.match(readme, /## Markdown 语法速查/);
+  assert.match(readme, /### 高亮块/);
+  assert.match(readme, /### MDX：在 Markdown 中使用 JSX/);
+  assert.match(readme, /@theme\/Tabs/);
+  assert.doesNotMatch(readme, /\b[A-Za-z]:[\\/]/);
+  assert.doesNotMatch(readme, /RockyLi|rockeyleo|李融|我的文档/i);
 
   assert.ok(
     existsSync(path.join(repoRoot, "content", "电控组知识库", "index.mdx")),
     "expected the electronic control knowledge base landing page",
   );
   assert.ok(existsSync(importedRoot), "expected the embedded software library");
+  assert.equal(
+    existsSync(
+      path.join(contentRoot, "电控组知识库", "RobotIC线上知识库"),
+    ),
+    false,
+    "the accidental nested Obsidian vault must not remain in content",
+  );
 
   const hierarchicalDocs = [
     "1. 编程基础/1.1-C语言编程.md",
@@ -148,9 +235,21 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   assert.match(indexHtml, /\/docs\/assets\//);
   assert.match(indexHtml, /\/docs\/img\/robot-logo-dark\.png/);
   assert.match(indexHtml, /\/docs\/img\/robot-logo-light\.png/);
+  assert.match(indexHtml, /href="?\/docs\/机械组知识库"?/);
   assert.match(indexHtml, /href="?\/docs\/电控组知识库"?/);
+  assert.match(indexHtml, /href="?\/docs\/算法组知识库"?/);
   assert.match(indexHtml, /class="knowledge-entry"/);
-  assert.match(indexHtml, /电控组资料/);
+  assert.match(indexHtml, /机械组知识库/);
+  assert.match(indexHtml, /电控组知识库/);
+  assert.match(indexHtml, /算法组知识库/);
+  const navbarHtml = indexHtml.slice(0, indexHtml.indexOf("<main"));
+  for (const label of ["机械组知识库", "电控组知识库", "算法组知识库"]) {
+    assert.match(
+      navbarHtml,
+      new RegExp(`>${label}</a>`),
+      `missing navbar knowledge base: ${label}`,
+    );
+  }
   assert.doesNotMatch(
     indexHtml,
     /嵌入式软件基础 · STM32 · 控制理论 · RTOS/,
@@ -335,8 +434,23 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   });
   assert.ok(sidebarFile, "expected generated sidebar metadata");
   const sidebarData = JSON.parse(readFileSync(sidebarFile, "utf8"));
+  const knowledgeBases = discoverKnowledgeBases(contentRoot);
+  assert.deepEqual(
+    knowledgeBases.map(({name}) => name),
+    ["机械组知识库", "电控组知识库", "算法组知识库"],
+  );
+  for (const knowledgeBase of knowledgeBases) {
+    assert.ok(
+      sidebarData.version.docsSidebars[knowledgeBase.sidebarId],
+      `missing sidebar for ${knowledgeBase.name}`,
+    );
+  }
+  const electricKnowledgeBase = knowledgeBases.find(
+    ({name}) => name === "电控组知识库",
+  );
+  assert.ok(electricKnowledgeBase, "expected the electric knowledge base");
   const sidebarLabels = collectSidebarLabels(
-    sidebarData.version.docsSidebars.electricControlSidebar,
+    sidebarData.version.docsSidebars[electricKnowledgeBase.sidebarId],
   );
   const expectedNumberedLabels = [
     "电控组知识库",
@@ -359,7 +473,7 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
     "3.4 【扩展】进一步理解控制理论",
     "4. RTOS",
     "4.1 RTOS",
-    "5. 【扩展】一点C++",
+    "5.【扩展】一点C++",
     "5.1 一点C++",
     "5.2 番外：在STM32工程中使用C++",
   ];
