@@ -62,6 +62,21 @@ function collectSidebarLabels(items) {
   );
 }
 
+function lastCommitIso(relativePath) {
+  const result = spawnSync(
+    "git",
+    ["log", "-1", "--format=%cI", "--", relativePath],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  const timestamp = result.stdout.trim();
+  assert.ok(timestamp, `expected git history for ${relativePath}`);
+  return new Date(timestamp).toISOString();
+}
+
 test("generates nested sidebars from content directories", () => {
   const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), "robotickb-"));
   try {
@@ -127,12 +142,24 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   assert.match(readme, /## 方式二：开发站点/);
   assert.match(readme, /## 自动生成知识库与侧边栏/);
   assert.match(readme, /### 特殊排序/);
+  assert.match(readme, /### 文档更新时间/);
   assert.match(readme, /## Markdown 语法速查/);
   assert.match(readme, /### 高亮块/);
   assert.match(readme, /### MDX：在 Markdown 中使用 JSX/);
   assert.match(readme, /@theme\/Tabs/);
   assert.doesNotMatch(readme, /\b[A-Za-z]:[\\/]/);
   assert.doesNotMatch(readme, /RockyLi|rockeyleo|李融|我的文档/i);
+
+  const configSource = readFileSync(
+    path.join(repoRoot, "docusaurus.config.ts"),
+    "utf8",
+  );
+  assert.match(configSource, /src\/remark\/lastUpdated\.mjs/);
+  const workflowSource = readFileSync(
+    path.join(repoRoot, ".github", "workflows", "deploy.yml"),
+    "utf8",
+  );
+  assert.match(workflowSource, /fetch-depth:\s*0/);
 
   assert.ok(
     existsSync(path.join(repoRoot, "content", "电控组知识库", "index.mdx")),
@@ -155,7 +182,7 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
     "2. STM32基础/2.1-引入和内核.md",
     "2. STM32基础/2.2-外设.md",
     "2. STM32基础/2.3-通信.md",
-    "2. STM32基础/2.4-【扩展】存储结构.md",
+    "2. STM32基础/2.4-【扩展】烧录和调试.md",
     "3. 控制理论/3.1-基础控制.md",
     "3. 控制理论/3.2-【扩展】滤波.md",
     "3. 控制理论/3.3-【扩展】运动解算和规划.md",
@@ -315,6 +342,45 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
     "info",
   );
 
+  const embeddedIndexPath =
+    "content/电控组知识库/嵌入式软件基础/index.md";
+  const embeddedIndexHtml = readFileSync(
+    path.join(
+      outputRoot,
+      "电控组知识库",
+      "嵌入式软件基础",
+      "index.html",
+    ),
+    "utf8",
+  );
+  assert.match(embeddedIndexHtml, /更新时间：/);
+  assert.match(
+    embeddedIndexHtml,
+    new RegExp(
+      `</header>\\s*<p class="doc-last-updated" data-doc-updated-at="${lastCommitIso(embeddedIndexPath)}">更新时间：`,
+    ),
+  );
+
+  const prefacePath =
+    "content/电控组知识库/嵌入式软件基础/0. 序言和目录.md";
+  const prefaceHtml = readFileSync(
+    path.join(
+      outputRoot,
+      "电控组知识库",
+      "嵌入式软件基础",
+      "序言和目录",
+      "index.html",
+    ),
+    "utf8",
+  );
+  assert.match(prefaceHtml, /更新时间：/);
+  assert.match(
+    prefaceHtml,
+    new RegExp(
+      `</header>\\s*<p class="doc-last-updated" data-doc-updated-at="${lastCommitIso(prefacePath)}">更新时间：`,
+    ),
+  );
+
   const coreHtml = readFileSync(
     path.join(
       outputRoot,
@@ -371,7 +437,7 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
 
   const documentTitles = [
     ["RTOS/RTOS", "RTOS"],
-    ["STM32基础/【扩展】存储结构", "【扩展】存储结构"],
+    ["STM32基础/【扩展】烧录和调试", "【扩展】烧录和调试"],
     ["STM32基础/外设", "外设"],
     ["STM32基础/引入和内核", "引入和内核"],
     ["STM32基础/通信", "通信"],
