@@ -105,8 +105,16 @@ test("generates nested sidebars from content directories", () => {
       "# 一级主题\n\n一级主题首页。\n",
     );
     writeFileSync(
-      path.join(secondTopicRoot, "示例文档.md"),
-      "# 示例文档\n\n正文。\n",
+      path.join(secondTopicRoot, "1.2 示例文档.md"),
+      "# 自动标题\n\n正文。\n",
+    );
+    writeFileSync(
+      path.join(secondTopicRoot, "1.3-连接符标题.md"),
+      "# 连接符标题\n\n正文。\n",
+    );
+    writeFileSync(
+      path.join(secondTopicRoot, "1.4_下划线标题.md"),
+      "# 下划线标题\n\n正文。\n",
     );
 
     assert.deepEqual(
@@ -128,6 +136,17 @@ test("generates nested sidebars from content directories", () => {
       {
         type: "doc",
         id: "机械组知识库/一级主题/二级主题/示例文档",
+        label: "1.2 自动标题",
+      },
+      {
+        type: "doc",
+        id: "机械组知识库/一级主题/二级主题/连接符标题",
+        label: "1.3 连接符标题",
+      },
+      {
+        type: "doc",
+        id: "机械组知识库/一级主题/二级主题/下划线标题",
+        label: "1.4 下划线标题",
       },
     ]);
   } finally {
@@ -143,6 +162,8 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   assert.match(readme, /## 自动生成知识库与侧边栏/);
   assert.match(readme, /### 特殊排序/);
   assert.match(readme, /### 文档更新时间/);
+  assert.match(readme, /编号 \+ 空格 \+ 标题/);
+  assert.match(readme, /2\.4 烧录和调试\.md/);
   assert.match(readme, /## Markdown 语法速查/);
   assert.match(readme, /### 高亮块/);
   assert.match(readme, /### MDX：在 Markdown 中使用 JSX/);
@@ -175,21 +196,21 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   );
 
   const hierarchicalDocs = [
-    "1. 编程基础/1.1-C语言编程.md",
-    "1. 编程基础/1.2-程序设计的思维.md",
-    "1. 编程基础/1.3-番外：跑步进入现代IDE——STM32开发环境的探索.md",
-    "1. 编程基础/1.4-附录：推荐代码规范.md",
-    "2. STM32基础/2.1-引入和内核.md",
-    "2. STM32基础/2.2-外设.md",
-    "2. STM32基础/2.3-通信.md",
-    "2. STM32基础/2.4-【扩展】烧录和调试.md",
-    "3. 控制理论/3.1-基础控制.md",
-    "3. 控制理论/3.2-【扩展】滤波.md",
-    "3. 控制理论/3.3-【扩展】运动解算和规划.md",
-    "3. 控制理论/3.4-【扩展】进一步理解控制理论.md",
-    "4. RTOS/4.1-RTOS.md",
-    "5.【扩展】一点C++/5.1-一点C++.md",
-    "5.【扩展】一点C++/5.2-番外：在STM32工程中使用C++.md",
+    "1. 编程基础/1.1 C语言编程.md",
+    "1. 编程基础/1.2 程序设计的思维.md",
+    "1. 编程基础/1.3 番外：跑步进入现代IDE——STM32开发环境的探索.md",
+    "1. 编程基础/1.4 附录：推荐代码规范.md",
+    "2. STM32基础/2.1 引入和内核.md",
+    "2. STM32基础/2.2 外设.md",
+    "2. STM32基础/2.3 通信.md",
+    "2. STM32基础/2.4 【扩展】烧录和调试.md",
+    "3. 控制理论/3.1 基础控制.md",
+    "3. 控制理论/3.2 【扩展】滤波.md",
+    "3. 控制理论/3.3 【扩展】运动解算和规划.md",
+    "3. 控制理论/3.4 【扩展】进一步理解控制理论.md",
+    "4. RTOS/4.1 RTOS.md",
+    "5.【扩展】一点C++/5.1 一点C++.md",
+    "5.【扩展】一点C++/5.2 番外：在STM32工程中使用C++.md",
   ];
   for (const relativePath of hierarchicalDocs) {
     assert.ok(
@@ -210,12 +231,17 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   );
 
   assert.equal(copiedDocs.length, 16);
-  assert.equal(imageFiles.length, 60);
+  assert.equal(imageFiles.length, 72);
 
   const imageReferences = [];
   const missingImages = [];
   for (const note of markdownFiles) {
     const markdown = readFileSync(note, "utf8");
+    assert.doesNotMatch(
+      markdown,
+      /!\[\[/,
+      `${note} uses an Obsidian-only image embed`,
+    );
     for (const match of markdown.matchAll(/!\[[^\]]*\]\(<([^>]+)>\)/g)) {
       const target = match[1];
       imageReferences.push(target);
@@ -227,7 +253,7 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
     }
   }
 
-  assert.equal(imageReferences.length, 42);
+  assert.equal(imageReferences.length, 47);
   assert.deepEqual(missingImages, []);
   const preface = readFileSync(
     path.join(importedRoot, "0. 序言和目录.md"),
@@ -531,7 +557,7 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
     "2.1 引入和内核",
     "2.2 外设",
     "2.3 通信",
-    "2.4 【扩展】存储结构",
+    "2.4 【扩展】烧录和调试",
     "3. 控制理论",
     "3.1 基础控制",
     "3.2 【扩展】滤波",

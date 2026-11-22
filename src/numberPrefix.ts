@@ -1,5 +1,7 @@
 export default function parseHierarchicalNumberPrefix(filename: string) {
-  const match = filename.match(/^(\d+(?:\.\d+)?)(?:\s*[._-]\s*)(.+)$/);
+  const match = filename.match(
+    /^(\d+(?:\.\d+)*)(?:\s*[._-]?\s*)(.+)$/,
+  );
   if (!match) {
     return {filename, numberPrefix: undefined};
   }

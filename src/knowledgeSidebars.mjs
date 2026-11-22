@@ -66,6 +66,31 @@ function toDocumentId(contentRoot, filePath) {
     .replace(documentPattern, '');
 }
 
+function getDocumentLabel(filePath) {
+  const stem = path.basename(filePath).replace(documentPattern, '');
+  const prefixMatch = stem.match(
+    /^(\d+(?:\.\d+)*)(\s*[._-]?\s*)(.+)$/,
+  );
+  const source = readFileSync(filePath, 'utf8').replace(
+    /^---\r?\n[\s\S]*?\r?\n---\r?\n?/,
+    '',
+  );
+  const title = source.match(/^#\s+(.+?)\s*$/m)?.[1]?.trim();
+  const fallbackTitle = prefixMatch?.[3] ?? stem;
+
+  if (!prefixMatch) {
+    return title ?? fallbackTitle;
+  }
+
+  const number = prefixMatch[1];
+  const separator = prefixMatch[2];
+  const numberLabel =
+    !number.includes('.') && separator.includes('.')
+      ? `${number}.`
+      : number;
+  return `${numberLabel} ${title ?? prefixMatch[3]}`;
+}
+
 function listContentEntries(directory) {
   return readdirSync(directory, {withFileTypes: true})
     .filter((entry) => !entry.name.startsWith('.'))
@@ -104,6 +129,7 @@ function buildDirectoryItem(contentRoot, directory, depth) {
       items.push({
         type: 'doc',
         id: toDocumentId(contentRoot, entry.path),
+        label: getDocumentLabel(entry.path),
       });
     }
   }

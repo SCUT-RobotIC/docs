@@ -1,6 +1,5 @@
 ---
 id: index
-title: 嵌入式软件基础
 slug: /电控组知识库/嵌入式软件基础
 sidebar_position: 1
 ---
