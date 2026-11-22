@@ -5,6 +5,7 @@ import remarkMath from 'remark-math';
 import {discoverKnowledgeBases} from './src/knowledgeSidebars.mjs';
 import parseHierarchicalNumberPrefix from './src/numberPrefix';
 import obsidianCallouts from './src/remark/obsidianCallouts';
+import lastUpdated from './src/remark/lastUpdated.mjs';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
@@ -41,7 +42,11 @@ const config: Config = {
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
           numberPrefixParser: parseHierarchicalNumberPrefix,
-          beforeDefaultRemarkPlugins: [remarkMath, obsidianCallouts],
+          beforeDefaultRemarkPlugins: [
+            remarkMath,
+            obsidianCallouts,
+            lastUpdated,
+          ],
           rehypePlugins: [rehypeKatex],
         },
         blog: false,

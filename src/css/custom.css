@@ -16,6 +16,7 @@
   --ifm-color-primary-lightest: #f4857e;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --doc-last-updated-color: #5f6670;
 }
 
 [data-theme='dark'] {
@@ -27,6 +28,7 @@
   --ifm-color-primary-lighter: #ff877f;
   --ifm-color-primary-lightest: #ffb8b4;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --doc-last-updated-color: #9ca3af;
 }
 
 .navbar__logo {
@@ -78,4 +80,16 @@
   color: var(--ifm-color-primary);
   font-size: 1.35rem;
   font-weight: 700;
+}
+
+.theme-doc-markdown.markdown > .doc-last-updated {
+  color: var(--doc-last-updated-color);
+  font-size: 0.8125rem;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.markdown > header + .doc-last-updated {
+  margin-top: -0.5rem;
+  margin-bottom: 1.5rem;
 }
