@@ -17,6 +17,9 @@ import {
   discoverKnowledgeBases,
   knowledgeBaseSidebarId,
 } from "../src/knowledgeSidebars.mjs";
+import obsidianImages, {
+  obsidianImageSizes,
+} from "../src/remark/obsidianImages.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const siteRoot = repoRoot;
@@ -154,6 +157,88 @@ test("generates nested sidebars from content directories", () => {
   }
 });
 
+test("converts Obsidian image sizing syntax", () => {
+  const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), "robotic-images-"));
+  try {
+    const assetsRoot = path.join(temporaryRoot, "assets");
+    mkdirSync(assetsRoot, {recursive: true});
+    writeFileSync(path.join(assetsRoot, "a.png"), "image");
+    const markdownPath = path.join(temporaryRoot, "note.md");
+    const tree = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "text",
+              value: "前文 ![[assets/a.png|300x200|桥接图]] 后文",
+            },
+            {
+              type: "image",
+              url: "assets/a.png",
+              alt: "标准图|400",
+            },
+          ],
+        },
+      ],
+    };
+
+    obsidianImages()(tree, {path: markdownPath});
+    const children = tree.children[0].children;
+    assert.equal(children[0].value, "前文 ");
+    assert.equal(children[1].type, "image");
+    assert.equal(children[1].url, "assets/a.png");
+    assert.equal(children[1].alt, "桥接图|300x200");
+    assert.equal(children[2].value, " 后文");
+    assert.equal(children[3].alt, "标准图|400");
+
+    const renderedTree = {
+      type: "root",
+      children: [
+        {
+          type: "mdxJsxTextElement",
+          name: "img",
+          attributes: [
+            {type: "mdxJsxAttribute", name: "alt", value: "桥接图|300x200"},
+            {type: "mdxJsxAttribute", name: "width", value: "1200"},
+            {type: "mdxJsxAttribute", name: "height", value: "800"},
+          ],
+          children: [],
+        },
+        {
+          type: "mdxJsxTextElement",
+          name: "img",
+          attributes: [
+            {type: "mdxJsxAttribute", name: "alt", value: "标准图|400"},
+            {type: "mdxJsxAttribute", name: "width", value: "1600"},
+            {type: "mdxJsxAttribute", name: "height", value: "900"},
+          ],
+          children: [],
+        },
+      ],
+    };
+    obsidianImageSizes()(renderedTree);
+    const firstImage = Object.fromEntries(
+      renderedTree.children[0].attributes.map(({name, value}) => [name, value]),
+    );
+    const secondImage = Object.fromEntries(
+      renderedTree.children[1].attributes.map(({name, value}) => [name, value]),
+    );
+    assert.deepEqual(firstImage, {
+      alt: "桥接图",
+      width: "300",
+      height: "200",
+    });
+    assert.deepEqual(secondImage, {
+      alt: "标准图",
+      width: "400",
+    });
+  } finally {
+    rmSync(temporaryRoot, {recursive: true, force: true});
+  }
+});
+
 test("builds the Docusaurus knowledge base under the docs URL", () => {
   const readme = readFileSync(path.join(repoRoot, "README.md"), "utf8");
   assert.match(readme, /## 发布前检查/);
@@ -237,11 +322,6 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   const missingImages = [];
   for (const note of markdownFiles) {
     const markdown = readFileSync(note, "utf8");
-    assert.doesNotMatch(
-      markdown,
-      /!\[\[/,
-      `${note} uses an Obsidian-only image embed`,
-    );
     for (const match of markdown.matchAll(/!\[[^\]]*\]\(<([^>]+)>\)/g)) {
       const target = match[1];
       imageReferences.push(target);
@@ -439,6 +519,26 @@ test("builds the Docusaurus knowledge base under the docs URL", () => {
   );
   assert.match(appendixHtml, /<title[^>]*>附录：推荐代码规范/);
   assert.match(appendixHtml, /<h1>附录：推荐代码规范<\/h1>/);
+
+  const advancedControlHtml = readFileSync(
+    path.join(
+      outputRoot,
+      "电控组知识库",
+      "嵌入式软件基础",
+      "控制理论",
+      "【扩展】进一步理解控制理论",
+      "index.html",
+    ),
+    "utf8",
+  );
+  assert.match(
+    advancedControlHtml,
+    /<img(?=[^>]*alt="Pasted image 20261117165112\.png")(?=[^>]*width="587")[^>]*>/,
+  );
+  assert.doesNotMatch(
+    advancedControlHtml,
+    /alt="[^"]+\|587"/,
+  );
 
   const designThinkingHtml = readFileSync(
     path.join(
